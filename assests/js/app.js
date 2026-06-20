@@ -1,25 +1,20 @@
- let BaseURL = 'https://fakestoreapi.com';   
-
+let BaseURL = 'https://fakestoreapi.com';   
 let productUrl = `${BaseURL}/products`;
-
 
 const productContainer= document.getElementById('productContainer');
 const productForm= document.getElementById('productForm');
 const titleControl= document.getElementById('title');
 const priceControl= document.getElementById('price');
 const imgControl= document.getElementById('img');
-
 const addProduct= document.getElementById('addProduct');
 const updateProduct= document.getElementById('updateProduct');
 const addBtn2= document.getElementById('addBtn2');
 const closebackdrop=[...document.querySelectorAll('.closebackdrop')];
-
-
 const productModel= document.getElementById('productModel')
+const spinner= document.getElementById('spinner')
+
 
 let productArr = []; 
-
-
 function snackbar(msg,icon){ 
         swal.fire({ 
               title:msg, 
@@ -28,8 +23,11 @@ function snackbar(msg,icon){
         })
 }
 
-
-
+function tooltip(){
+    $(function () {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+}
 
 function createCard(arr){ 
        let res =" "; 
@@ -37,7 +35,7 @@ function createCard(arr){
        arr.forEach(ele=>{ 
                 res +=`<div class="col-md-4 mb-4" id=${ele.id}>
                 <div class="card productCard">
-                    <div class="card-header">
+                    <div class="card-header" data-toggle="tooltip" data-placement="top" title="${ele.title}">
                         <h3>${ele.title}</h3>
                         <h4>${ele.price}$</h4>
                     </div>
@@ -53,35 +51,33 @@ function createCard(arr){
             </div>`
        });
        productContainer.innerHTML= res ;
+       tooltip()
 }
-
-
-
-
 
 function fetchProduct(){ 
 
-//api configuration...
+spinner.classList.remove('d-none')
     let xhr= new XMLHttpRequest() ;
         xhr.open('GET', productUrl);
  
        xhr.send(null);
        xhr.onload = function(){ 
           if(xhr.status>=200 && xhr.status<=299){ 
-              productArr= JSON.parse(xhr.response);
-              
-                createCard(productArr);
-          }else{ 
-               snackbar
-          }
-       }
+                productArr= JSON.parse(xhr.response);
+                    createCard(productArr);
+                   // snackbar('product fetched successfully', 'success')
+                }else{ 
+                snackbar('product fetched failed', 'error')
+                }
+                spinner.classList.add('d-none')
+            }
 
 }
-
 fetchProduct();
 
 function onSubmit(eve){ 
           eve.preventDefault();
+          spinner.classList.remove('d-none')
     let newProduct = { 
             title:titleControl.value ,
             price:priceControl.value , 
@@ -89,7 +85,6 @@ function onSubmit(eve){
     }
 
     productArr.push(newProduct);
-
 
     let xhr= new XMLHttpRequest() ; 
       xhr.open('POST', productUrl); 
@@ -103,7 +98,7 @@ function onSubmit(eve){
                  div.id= res.id;
                  div.className='col-md-4'; 
                  div.innerHTML= `  <div class="card productCard">
-                                    <div class="card-header">
+                                    <div class="card-header" data-toggle="tooltip" data-placement="top" title="${newProduct.title}">
                                         <h3>${newProduct.title}</h3>
                                         <h4>${newProduct.price}$</h4>
                                     </div>
@@ -118,12 +113,14 @@ function onSubmit(eve){
                                 </div>`
 
             productContainer.prepend(div) ;
+            tooltip()
          
           }else{ 
               snackbar('product submit failed....!','error')
           }
+          spinner.classList.add('d-none')
       } 
- 
+
 }
 
 
@@ -141,6 +138,7 @@ function onRemove(ele){
             confirmButtonText: "Yes, delete it!"
             }).then((result) => {
             if (result.isConfirmed) { 
+                spinner.classList.remove('d-none')
 
                 
                    let xhr =new XMLHttpRequest() ;
@@ -149,22 +147,21 @@ function onRemove(ele){
                 
                        xhr.onload = function (){ 
                             if(xhr.status>=200 && xhr.status<=299){ 
-                                   ele.closest('.col-md-6').remove();
+                                   ele.closest('.col-md-4').remove();
                             }else{ 
                                  snackbar('Failed to delete', 'error')
                             }
+                                spinner.classList.add('d-none')
+
                        }
 
                  }    
-            });
-
-            
-
+         });
 }
 
-
-
 function onEdit(ele){
+     spinner.classList.remove('d-none')
+
        let editId= ele.closest('.col-md-4').id;
             localStorage.setItem('EditId', editId);
        let EditUrl= `${BaseURL}/products/${editId}`; 
@@ -189,16 +186,21 @@ function onEdit(ele){
                 
                 addProduct.classList.add('d-none');
                 updateProduct.classList.remove('d-none');
+                ontoggleHandler()
                 
             }else{ 
                   snackbar('failed to edit','error');
               }
+                spinner.classList.add('d-none')
+
                
           }
         
  }
 
 function onUpdate(){ 
+        spinner.classList.remove('d-none')
+
       let updateId= localStorage.getItem('EditId');
 
       let updateUrl =`${BaseURL}/products/${updateId}`;
@@ -219,7 +221,7 @@ function onUpdate(){
             if(xhr.status>=200 && xhr.status<=299 ){ 
                   let col= document.getElementById(updateId);
                    col.innerHTML = `<div class="card productCard">
-                                    <div class="card-header">
+                                    <div class="card-header" data-toggle="tooltip" data-placement="top" title="${updateObj.title}">>
                                         <h3>${updateObj.title}</h3>
                                         <h4>${updateObj.price}$</h4>
                                     </div>
@@ -232,17 +234,28 @@ function onUpdate(){
                                         <button  onclick="onRemove(this)" class="btn btn-inline-block btn-outline-danger">Delete</button>
                                     </div>
                                 </div>`
+                    addProduct.classList.remove('d-none');
+                    updateProduct.classList.add('d-none');
+                    productForm.reset();
+                    ontoggleHandler()
+                    document.querySelectorAll('.btn-outline-danger').forEach(btn=>{ 
+                     btn.disabled =false;
+                     snackbar('updated successfully', 'success')
+                     tooltip()
+                     col.classList.add('highlight')
+                     setTimeout(() => {
+                        col.classList.remove('highlight')
+                     }, 4000);
+               })
                  
+               }else{
+                snackbar('Updated failed', 'error')
                }
+               spinner.classList.add('d-none')
                   
             } 
             
-            addProduct.classList.remove('d-none');
-            updateProduct.classList.add('d-none');
-            productForm.reset();
-            document.querySelectorAll('.btn-outline-danger').forEach(btn=>{ 
-                  btn.disabled =false;
-               })
+            
            
         } 
 
@@ -267,8 +280,6 @@ closebackdrop.forEach(btn=>{
 
 
    
-   
-
 
  productForm.addEventListener('submit', onSubmit); 
  updateProduct.addEventListener('click', onUpdate)
